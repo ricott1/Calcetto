@@ -1,0 +1,6 @@
+import random
+def move(ball, matrix):
+	print ball, matrix[ball[0]][ball[1]]
+	go = random.sample(matrix[ball[0]][ball[1]],1)[0]
+	print go
+	return go[0], go[1]
