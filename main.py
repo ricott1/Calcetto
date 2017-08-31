@@ -11,77 +11,93 @@ class Game:
         self.pitch = self.game_frame.pitch_frame
         path = list(sys.path)
         sys.path.insert(0, 'engine')
-        self.eng1 = __import__(eng1)
-        self.eng2 = __import__(eng2)
-        self.turn = 1
+        self.engines = [__import__(eng1), __import__(eng2)]
+        self.colors = ['red', 'blue']
+        self.turn = 0
         self.w = w
         self.h = h
-        #self.knots = [[0 for x in xrange(pitch.w+1)] for y in xrange(pitch.h+1)]
-        self.knots = np.array([0 for x in xrange(self.w+1)], dtype=object)
-        adj = np.array([0 for x in xrange(self.w+1)], dtype=object)
-        for i in xrange(self.h):
-            self.knots = np.vstack((self.knots,adj))#create the matrix
-        #legal moves array
-        middleMoves = [(1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1)]
+
+        self.initialize()
+
+    def initialize(self):
+        self.knots = np.array([[0 for y in xrange(self.h+1)] for x in xrange(self.w+1)], dtype=object) 
+        moves = [(1,1),(1,0),(1,-1),(0,1),(0,-1),(-1,1),(-1,0),(-1,-1)]
         
-        for i in xrange(self.w-1):
-            for j in xrange(self.h-1):
-                self.knots[j+1][i+1] = middleMoves
-            self.knots[0][i+1] = [m for m in middleMoves if m[0] == 1]
-            self.knots[self.h][i+1] = [m for m in middleMoves if m[0] == -1]
-        for j in xrange(self.h-1):
-            self.knots[j+1][0] = [m for m in middleMoves if m[1] == 1]
-            self.knots[j+1][self.w] = [m for m in middleMoves if m[1] == -1]
-        #self.knots[1][1] = [m for m in middleMoves if m != (-1,-1)]
-        #self.knots[1][-2] = [m for m in middleMoves if m != (-1,1)]
-        #self.knots[-2][1] = [m for m in middleMoves if m != (1,-1)]
-        #self.knots[-2][-2] = [m for m in middleMoves if m != (1,1)]
-        #print self.knots
-        self.ball_pos = [0,0]
-
-        #self.play()
-
-
-    def updateLegal(self):
-        pass
-    
-    
+        for x in xrange(len(self.knots)):
+            for y in xrange(len(self.knots[0])):
+            	my_moves = list(moves)
+                if x == 0:
+                    my_moves = [m for m in my_moves if m[0] == 1]
+                if x == self.w:
+                    my_moves = [m for m in my_moves if m[0] == -1]
+                if y == 0:
+                    my_moves = [m for m in my_moves if m[1] == 1]
+                if y == self.h:
+                    my_moves = [m for m in my_moves if m[1] == -1]
+                #take out corners
+                if x == 1 and y == 1:
+                    my_moves = [m for m in my_moves if m != (-1, -1)]
+                if x == 1 and y == self.h - 1:
+                    my_moves = [m for m in my_moves if m != (-1, 1)]
+                if x == self.w - 1 and y == 1:
+                    my_moves = [m for m in my_moves if m != (1, -1)]
+                if x == self.w - 1 and y == self.h - 1:
+                    my_moves = [m for m in my_moves if m != (1, 1)]
+                self.knots[x][y] = my_moves
+       
+    def update_moves(self, pos, a, b):
+        self.knots[pos[0]][pos[1]] = [m for m in self.knots[pos[0]][pos[1]] if m != (a,b)]
+        self.knots[pos[0] + a][pos[1] + b] = [m for m in self.knots[pos[0] + a][pos[1] + b] if m != (-a,-b)]    
         
-    def moveBall(self,a,b,col):
-        #a,b are the moving directions
-        self.ball_pos[0] += a
-        self.ball_pos[1] += b
-
-        self.pitch.draw_ball(self.ball_pos)
+    def move_ball(self, pos, a, b, col):
+        #a,b are the moves in x-y direction
+        self.pitch.draw_move(pos, a, b, col)
+        new_pos = [pos[0] + a, pos[1] + b]        
+        self.pitch.draw_ball(new_pos)
+        return new_pos
 
     def play(self):
+    	pos = [int(self.w/2.),int(self.h/2.)]
+    	turn = 0
+    	visited = []
+    	self.pitch.reset_button['state'] = 'disabled'      
+    	self.pitch.draw_ball(pos) 
         while True:
-            print self.ball_pos, self.knots[self.ball_pos[0]][self.ball_pos[1]]
+            
             raw_input()
-            if self.turn == 1:
-                a,b = self.eng1.move(self.ball_pos, self.knots)
-                col = 'red'
-                
-            elif self.turn == -1:
-                a,b = self.eng2.move(self.ball_pos, self.knots)
-                col = 'blue'
-            self.knots[self.ball_pos[0]][self.ball_pos[1]] = [m for m in self.knots[self.ball_pos[0]][self.ball_pos[1]] if m != (a,b)]
-            self.moveBall(a,b,col)    
-            if self.ball_pos == [int(pitch.w/2)-1,0] or self.ball_pos ==  [int(pitch.w/2)+1,0]:
-                Label(self.master,text = 'player2 won').pack(side=TOP) 
-                break
-            elif self.ball_pos == [int(pitch.w/2)-1,pitch.h] or self.ball_pos == [int(pitch.w/2)+1,pitch.h]:
-                Label(self.master,text = 'player1 won').pack(side=TOP)
-                break
-            if len(self.knots[self.ball_pos[0]][self.ball_pos[1]])==8: #does not work for the precorners
-                self.turn *= -1
-            if len(self.knots[self.ball_pos[0]][self.ball_pos[1]])==0: #does not work for the precorners
-                Label(self.master,text = 'Draw').pack(side=TOP)
-                break
-            self.knots[self.ball_pos[0]][self.ball_pos[1]] = [m for m in self.knots[self.ball_pos[0]][self.ball_pos[1]] if m != (-a,-b)]
+            a,b = self.engines[self.turn].move(pos, self.knots)
             
-            self.field.update()
-            
+            self.update_moves(pos, a, b)
+            pos = self.move_ball(pos, a,b, self.colors[turn]) 
+               
+            winner = self.check_winner(pos)
+            if winner:
+            	break
+            else:
+            	print "ball in {}, visited {}".format(pos, visited)
+                if pos not in visited: 
+                	visited.append(list(pos))
+                	if pos[0] not in (0, self.w) and pos[1] not in (0, self.h):
+                		turn = (turn+1)%2
+
+                if len(self.knots[pos[0]][pos[1]]) == 0: 
+                    print 'Draw'
+                    break
+        self.pitch.reset_button['state'] = 'normal'       
+               
+    def check_winner(self, pos):
+        if pos == [int(self.w/2)-1,0] or pos ==  [int(self.w/2)+1,0]:
+            print 'player2 won'
+            return True
+        elif pos == [int(self.w/2)-1,self.h] or pos == [int(self.w/2)+1,self.h]:
+            print 'player1 won'
+            return True
+        return False
+
+    def reset(self):
+    	self.initialize()
+        self.play()
+
 class GameFrame(Frame):
     def __init__(self, master):
         Frame.__init__(self, master)
@@ -92,11 +108,15 @@ class GameFrame(Frame):
     
         
     def start(self, w, h, eng1, eng2):
-    	self.load_frame.pack_forget()
+        self.load_frame.pack_forget()
         self.pitch_frame = PitchFrame(self, w, h)
         self.pitch_frame.pack()
         print "{} vs {}".format(eng1, eng2)
         self.game = Game(self, w, h, eng1, eng2)
+        self.game.play()
+
+    def reset(self):
+    	self.game.reset()
         
 
 class PitchFrame(Frame):
@@ -111,7 +131,9 @@ class PitchFrame(Frame):
         self.out_radius = 9
         self.w = w
         self.h = h
-        
+        self.moves = []
+        self.reset_button = Button(self,text='Reset',command=self.reset, state=DISABLED)        
+        self.reset_button.pack(side=TOP)
         self.field = Canvas(self, width = 2 * self.offset + self.w * self.R, height =  2 * (self.outer + self.offset) + self.h * self.R)
         self.field.create_rectangle(self.offset, self.offset + self.outer, self.w  * self.R + self.offset, self.h  * self.R + self.offset + self.outer, fill='azure')
         self.field.create_rectangle(self.offset + (int(self.w/2)-1)*self.R, self.offset, self.offset + (int(self.w/2)+1)*self.R, self.outer + self.offset, fill='cornflower blue')
@@ -121,28 +143,38 @@ class PitchFrame(Frame):
             self.field.create_line(self.offset + self.outer + self.R*i, self.offset + self.outer, self.offset + self.outer + self.R*i, self.h * self.R + self.offset + self.outer, fill='purple')
         for i in xrange(self.h-1):
             self.field.create_line(self.offset, self.offset + self.outer + self.outer+ self.R * i, self.w * self.R + self.offset, self.offset + self.outer + self.outer+ self.R *i, fill='purple')
-
-        self.draw_ball((int(self.w/2.), int(self.h/2.)))
         self.field.pack()
 
     def draw_ball(self, pos):        
         x = self.offset + pos[0]*self.R
         y = self.offset + (pos[1]+1)*self.R
+        try:
+            self.field.delete(self.in_ball)
+            self.field.delete(self.out_ball)
+        except:
+            pass
+        self.out_ball = self.field.create_oval(x - self.out_radius, y - self.out_radius, x + self.out_radius, y + self.out_radius, width=0,fill='black')
+        self.in_ball = self.field.create_oval(x - self.in_radius, y - self.in_radius, x + self.in_radius, y + self.in_radius, width=0,fill='white')
         
-        self.field.create_oval(x - self.out_radius, y - self.out_radius, x + self.out_radius, y + self.out_radius, width=0,fill='black')
-        self.field.create_oval(x - self.in_radius, y - self.in_radius, x + self.in_radius, y + self.in_radius, width=0,fill='white')
-        
-    def draw_move(self, pos):
-        self.field.create_line(self.offset + pos[0]*self.R, self.offset +(pos[1]+1)*self.R, 10+(pos[0]+a)*self.R, self.offset+(pos[1]+1+b)*self.R, fill=col,width=2)
-        
+    def draw_move(self, pos, a, b, col):
+        self.moves.append(self.field.create_line(self.offset + pos[0]*self.R, self.offset +(pos[1]+1)*self.R, self.offset+(pos[0]+a)*self.R, self.offset+(pos[1]+1+b)*self.R, fill=col,width=2))
+    
+    def reset(self):
+    	for m in self.moves:
+    		self.field.delete(m)
+    	self.master.reset()
+
+
 class LoadFrame(Frame):
     """docstring for LoadFrame"""
     def __init__(self, master):
         Frame.__init__(self, master)
         self.master = master
-        self.width_entry = Entry(self)
-        self.height_entry = Entry(self)
+        Label(self, text="width").pack(side=LEFT)
+        self.width_entry = Entry(self, width = 4)
         self.width_entry.pack(side=LEFT)
+        Label(self, text="Height").pack(side=LEFT)
+        self.height_entry = Entry(self, width = 4)        
         self.height_entry.pack(side=LEFT)
         self.load_entry = Listbox(self,selectmode=MULTIPLE)
         self.load_entry.pack(side=RIGHT)
@@ -151,8 +183,8 @@ class LoadFrame(Frame):
             if self.output.split()[i].split('.')[1] == 'py': #only py files
                 self.load_entry.insert(END,self.output.split()[i])
         
-        self.createButton = Button(self,text='start',command=self.start)        
-        self.createButton.pack()
+        self.start_button = Button(self,text='start',command=self.start, width=20, height = 8)        
+        self.start_button.pack(side=BOTTOM)
 
     def start(self):
         index = self.load_entry.curselection() #index of the choosen engines
