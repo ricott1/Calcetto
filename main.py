@@ -13,7 +13,6 @@ class Game:
         sys.path.insert(0, 'engine')
         self.engines = [__import__(eng1), __import__(eng2)]
         self.colors = ['red', 'blue']
-        self.turn = 0
         self.w = w
         self.h = h
 
@@ -59,13 +58,13 @@ class Game:
     def play(self):
     	pos = [int(self.w/2.),int(self.h/2.)]
     	turn = 0
-    	visited = []
+    	visited = [list(pos)]
     	self.pitch.reset_button['state'] = 'disabled'      
     	self.pitch.draw_ball(pos) 
         while True:
-            
+            print self.engines[turn], turn
             raw_input()
-            a,b = self.engines[self.turn].move(pos, self.knots)
+            a,b = self.engines[turn].move(pos, self.knots, turn)
             
             self.update_moves(pos, a, b)
             pos = self.move_ball(pos, a,b, self.colors[turn]) 
@@ -74,7 +73,6 @@ class Game:
             if winner:
             	break
             else:
-            	print "ball in {}, visited {}".format(pos, visited)
                 if pos not in visited: 
                 	visited.append(list(pos))
                 	if pos[0] not in (0, self.w) and pos[1] not in (0, self.h):
@@ -112,6 +110,7 @@ class GameFrame(Frame):
         self.pitch_frame = PitchFrame(self, w, h)
         self.pitch_frame.pack()
         print "{} vs {}".format(eng1, eng2)
+        self.pitch_frame.add_names(eng1, eng2)
         self.game = Game(self, w, h, eng1, eng2)
         self.game.play()
 
@@ -134,6 +133,13 @@ class PitchFrame(Frame):
         self.moves = []
         self.reset_button = Button(self,text='Reset',command=self.reset, state=DISABLED)        
         self.reset_button.pack(side=TOP)
+        self.name_frame = Frame(self)
+        self.name_frame.pack(side=BOTTOM)
+        self.name1_label = Label(self.name_frame, text="", bg = 'red', fg = 'black')
+        self.name1_label.pack(side=LEFT)
+        Label(self.name_frame, text = '  vs  ').pack(side=LEFT)
+        self.name2_label = Label(self.name_frame, text="", bg = 'blue', fg = 'white')
+        self.name2_label.pack(side=LEFT)
         self.field = Canvas(self, width = 2 * self.offset + self.w * self.R, height =  2 * (self.outer + self.offset) + self.h * self.R)
         self.field.create_rectangle(self.offset, self.offset + self.outer, self.w  * self.R + self.offset, self.h  * self.R + self.offset + self.outer, fill='azure')
         self.field.create_rectangle(self.offset + (int(self.w/2)-1)*self.R, self.offset, self.offset + (int(self.w/2)+1)*self.R, self.outer + self.offset, fill='cornflower blue')
@@ -164,6 +170,9 @@ class PitchFrame(Frame):
     		self.field.delete(m)
     	self.master.reset()
 
+    def add_names(self, name1, name2):
+    	self.name1_label['text'] = name1
+    	self.name2_label['text'] = name2
 
 class LoadFrame(Frame):
     """docstring for LoadFrame"""
