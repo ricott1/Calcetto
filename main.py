@@ -61,7 +61,6 @@ class Game:
     	turn = 0
     	self.pitch.reset_button['state'] = 'disabled'      
     	self.pitch.draw_ball(pos) 
-        raw_input()
         while True:
             print self.engines[turn], turn
             raw_input()
