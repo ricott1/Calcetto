@@ -57,19 +57,24 @@ class Game:
 
     def play(self):
     	pos = [int(self.w/2.),int(self.h/2.)]
+        visited = [int(self.w/2.),int(self.h/2.)]
     	turn = 0
-    	visited = [list(pos)]
     	self.pitch.reset_button['state'] = 'disabled'      
     	self.pitch.draw_ball(pos) 
+        raw_input()
         while True:
             print self.engines[turn], turn
             raw_input()
             a,b = self.engines[turn].move(pos, self.knots, turn)
-            
-            self.update_moves(pos, a, b)
-            pos = self.move_ball(pos, a,b, self.colors[turn]) 
-               
-            winner = self.check_winner(pos)
+            if self.check_legal(pos, a, b):
+
+                self.update_moves(pos, a, b)
+                pos = self.move_ball(pos, a,b, self.colors[turn]) 
+                   
+                winner = self.check_winner(pos)
+            else:
+                winner = self.engines[turn - 1]
+
             if winner:
             	break
             else:
@@ -82,15 +87,18 @@ class Game:
                     print 'Draw'
                     break
         self.pitch.reset_button['state'] = 'normal'       
-               
+
+    def check_legal(self, pos, a, b):
+        return (a,b) in self.knots[pos[0]][pos[1]]
+
     def check_winner(self, pos):
-        if pos == [int(self.w/2)-1,0] or pos ==  [int(self.w/2)+1,0]:
+        if pos in [[int(self.w/2) + i, 0] for i in xrange(-1,2)]: 
             print 'player2 won'
-            return True
-        elif pos == [int(self.w/2)-1,self.h] or pos == [int(self.w/2)+1,self.h]:
+            return self.engines[1]
+        elif pos in [[int(self.w/2) + i, self.h] for i in xrange(-1,2)]:
             print 'player1 won'
-            return True
-        return False
+            return self.engines[0]
+        return None
 
     def reset(self):
     	self.initialize()
@@ -180,19 +188,21 @@ class LoadFrame(Frame):
         Frame.__init__(self, master)
         self.master = master
         Label(self, text="width").pack(side=LEFT)
-        self.width_entry = Entry(self, width = 4)
+        self.width_entry = Entry(self, width = 2)
+        self.width_entry.insert(0, 6)
         self.width_entry.pack(side=LEFT)
         Label(self, text="Height").pack(side=LEFT)
-        self.height_entry = Entry(self, width = 4)        
+        self.height_entry = Entry(self, width = 2) 
+        self.height_entry.insert(0, 8)       
         self.height_entry.pack(side=LEFT)
         self.load_entry = Listbox(self,selectmode=MULTIPLE)
-        self.load_entry.pack(side=RIGHT)
+        self.load_entry.pack(side=TOP)
         self.output = subprocess.check_output('ls engine/', shell=True)
         for i in xrange(len(self.output.split())):
             if self.output.split()[i].split('.')[1] == 'py': #only py files
                 self.load_entry.insert(END,self.output.split()[i])
         
-        self.start_button = Button(self,text='start',command=self.start, width=20, height = 8)        
+        self.start_button = Button(self,text='start',command=self.start, width=16, height = 2)        
         self.start_button.pack(side=BOTTOM)
 
     def start(self):
@@ -211,8 +221,8 @@ class LoadFrame(Frame):
             
             self.master.start(w, h, eng1, eng2)
             
-        #else:
-        #    Label(self,text='Choose two engines').pack(side=BOTTOM)    
+        else:
+            Label(self,text='Choose two engines').pack(side=BOTTOM)    
 
 
 def main():

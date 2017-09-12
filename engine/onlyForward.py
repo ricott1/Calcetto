@@ -8,9 +8,3 @@ def move(pos, matrix, turn):
     else:
 	   return random.sample(moves,1)[0]
 	
-
-def __str__():
-    return "Madonna"
-
-
-#turno 0 va in giu, turno 1 va in su
